@@ -1,21 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
-// GET /api/agents - Get first 50 agents
-export async function GET() {
+// GET /api/agents - Get first 50 agents (optionally filter by isPublic)
+export async function GET(request: NextRequest) {
   try {
-    const agents = await db.select().from(agentsTable).orderBy(desc(agentsTable.id)).limit(50);
+    const searchParams = request.nextUrl.searchParams;
+    const publicOnly = searchParams.get('public') === 'true';
+
+    const agents = publicOnly
+      ? await db
+          .select()
+          .from(agentsTable)
+          .where(eq(agentsTable.isPublic, true))
+          .orderBy(desc(agentsTable.createdAt))
+          .limit(50)
+      : await db
+          .select()
+          .from(agentsTable)
+          .orderBy(desc(agentsTable.createdAt))
+          .limit(50);
 
     // Map database fields to match Agent interface
-    const mappedAgents = agents.map((agent) => ({
-      id: agent.id.toString(),
-      title: agent.name,
-      description: agent.description,
-      prompt: agent.prompt,
-      tools: (agent.tools as string[]) || [],
-    }));
+    const mappedAgents = await Promise.all(
+      agents.map(async (agent) => {
+        let parentAgent = null;
+        if (agent.parentAgentId) {
+          const [parent] = await db
+            .select()
+            .from(agentsTable)
+            .where(eq(agentsTable.id, agent.parentAgentId))
+            .limit(1);
+          if (parent) {
+            parentAgent = {
+              id: parent.id,
+              title: parent.name,
+              description: parent.description,
+              prompt: parent.prompt,
+              tools: (parent.tools as string[]) || [],
+            };
+          }
+        }
+
+        return {
+          id: agent.id,
+          title: agent.name,
+          description: agent.description,
+          prompt: agent.prompt,
+          tools: (agent.tools as string[]) || [],
+          shareId: agent.shareId,
+          isPublic: agent.isPublic,
+          parentAgentId: agent.parentAgentId,
+          parentAgent,
+        };
+      })
+    );
 
     return NextResponse.json(mappedAgents);
   } catch (error) {
@@ -46,11 +86,14 @@ export async function POST(request: NextRequest) {
 
     // Map database fields to match Agent interface
     const mappedAgent = {
-      id: newAgent.id.toString(),
+      id: newAgent.id,
       title: newAgent.name,
       description: newAgent.description,
       prompt: newAgent.prompt,
       tools: (newAgent.tools as string[]) || [],
+      shareId: newAgent.shareId,
+      isPublic: newAgent.isPublic,
+      parentAgentId: newAgent.parentAgentId,
     };
 
     return NextResponse.json(mappedAgent, { status: 201 });

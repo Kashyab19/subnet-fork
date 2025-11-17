@@ -4,6 +4,10 @@ export interface Agent {
   description: string;
   prompt: string;
   tools: string[];
+  shareId?: string | null;
+  isPublic?: boolean;
+  parentAgentId?: string | null;
+  parentAgent?: Agent | null; // For forked agent attribution
 }
 
 export const AVAILABLE_TOOLS = [

@@ -8,6 +8,13 @@
       "when": 1759804818982,
       "tag": "0000_big_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763419223248,
+      "tag": "0001_legal_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }
