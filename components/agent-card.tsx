@@ -12,12 +12,17 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Share2, GitFork, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { Trash2, Share2, GitFork, Loader2, Zap, Brain, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { AVAILABLE_TOOLS } from '@/lib/types';
 import { ShareDialog } from '@/components/share-dialog';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import {
+  generatePersonalityTraits,
+} from '@/lib/utils';
+import { ToolIcon } from '@/components/tool-icon';
+import { cn } from '@/lib/utils';
 
 interface AgentCardProps {
   agent: Agent;
@@ -30,8 +35,13 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
   const [isDeleting, setIsDeleting] = useState(false);
   const [isForking, setIsForking] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  // Generate visual identity
+  const traits = useMemo(() => generatePersonalityTraits(agent), [agent]);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -85,13 +95,14 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
       }
 
       const forkedAgent = await response.json();
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+      
       toast({
         title: 'Agent forked!',
         description: 'Redirecting to edit your new agent...',
       });
       
-      // Redirect to edit/create page with the forked agent data
-      // For now, redirect to the run page - you might want to create an edit page
       router.push(`/run/${forkedAgent.id}`);
     } catch (error: any) {
       console.error('Error forking agent:', error);
@@ -111,18 +122,52 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
     setShareDialogOpen(true);
   };
 
+  const speedIcons = {
+    lightning: Zap,
+    thoughtful: Brain,
+    balanced: Sparkles,
+  };
+
+  const speedLabels = {
+    lightning: 'Lightning Fast',
+    thoughtful: 'Thoughtful',
+    balanced: 'Balanced',
+  };
+
+  const styleLabels = {
+    creative: 'Creative',
+    analytical: 'Analytical',
+    balanced: 'Balanced',
+  };
+
+  const SpeedIcon = speedIcons[traits.speed];
+
   return (
     <>
-      <Card className="relative">
-        <CardHeader>
+      <Card
+        className={cn(
+          'group relative overflow-hidden transition-all duration-300',
+          'hover:shadow-xl hover:-translate-y-1',
+          isHovered && 'shadow-lg',
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-start gap-2">
-                <CardTitle className="text-xl">{agent.title}</CardTitle>
+              <div className="flex items-start gap-2 flex-wrap">
+                <CardTitle className="text-xl transition-colors group-hover:text-primary">
+                  {agent.title}
+                </CardTitle>
                 {agent.parentAgent && (
                   <Badge variant="outline" className="text-xs shrink-0">
                     <Link
-                      href={agent.parentAgent.shareId ? `/agent/${agent.parentAgent.shareId}` : `/run/${agent.parentAgent.id}`}
+                      href={
+                        agent.parentAgent.shareId
+                          ? `/agent/${agent.parentAgent.shareId}`
+                          : `/run/${agent.parentAgent.id}`
+                      }
                       className="hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -131,48 +176,103 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
                   </Badge>
                 )}
               </div>
-              <CardDescription className="line-clamp-2 mt-1">{agent.description}</CardDescription>
+              <CardDescription className="line-clamp-2 mt-1">
+                {agent.description}
+              </CardDescription>
             </div>
             {onDelete && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 shrink-0"
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 shrink-0 transition-all duration-200"
                 onClick={handleDelete}
                 disabled={isDeleting}
               >
-                <Trash2 className="h-4 w-4" />
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
               </Button>
             )}
           </div>
+          
+          {/* Personality Speed Badge */}
+          <div className="mt-2">
+            <Badge
+              variant="secondary"
+              className={cn(
+                'text-xs transition-all duration-300',
+                isHovered && 'scale-105',
+              )}
+            >
+              <SpeedIcon className="mr-1 h-3 w-3" />
+              {speedLabels[traits.speed]}
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <p className="text-muted-foreground text-sm font-medium">Tools:</p>
-              <div className="flex flex-wrap gap-2">
-                {agent.tools.slice(0, 2).map((tool) => (
-                  <Badge key={tool} variant="secondary" className="text-xs">
-                    {AVAILABLE_TOOLS.find((t) => t.value === tool)?.label}
-                  </Badge>
-                ))}
-                {agent.tools.length > 2 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{agent.tools.length - 2}
-                  </Badge>
-                )}
+
+        <CardContent className="space-y-4">
+          {/* Personality Traits */}
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-xs transition-all duration-200',
+                traits.style === 'creative' && 'border-pink-200 text-pink-700 dark:border-pink-800 dark:text-pink-300',
+                traits.style === 'analytical' && 'border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300',
+              )}
+            >
+              {styleLabels[traits.style]}
+            </Badge>
+            {traits.specialties.slice(0, 2).map((specialty, idx) => (
+              <Badge key={idx} variant="secondary" className="text-xs">
+                {specialty}
+              </Badge>
+            ))}
+          </div>
+
+          {/* Tools */}
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-medium">Tools</p>
+            <div className="flex flex-wrap gap-2">
+              {agent.tools.slice(0, 3).map((tool) => (
+                <Badge
+                  key={tool}
+                  variant="outline"
+                  className="text-xs gap-1.5 transition-all duration-200 hover:scale-105"
+                >
+                  <ToolIcon tool={tool} size={12} />
+                  {AVAILABLE_TOOLS.find((t) => t.value === tool)?.label || tool}
+                </Badge>
+              ))}
+              {agent.tools.length > 3 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{agent.tools.length - 3}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Prompt Preview on Hover */}
+          {isHovered && (
+            <div className="animate-in fade-in-50 slide-in-from-top-2 duration-200">
+              <div className="prose prose-sm text-muted-foreground bg-muted/50 max-h-32 max-w-none overflow-hidden rounded-md border p-2 text-xs">
+                <p className="line-clamp-3 m-0">{agent.prompt}</p>
               </div>
             </div>
-            {agent.isPublic && (
-              <Badge variant="outline" className="text-xs">
-                Public
-              </Badge>
-            )}
-          </div>
+          )}
+
+          {agent.isPublic && (
+            <Badge variant="outline" className="text-xs w-fit">
+              Public
+            </Badge>
+          )}
         </CardContent>
-        <CardFooter className="flex gap-2">
+
+        <CardFooter className="flex gap-2 pt-4">
           <Link href={`/run/${agent.id}`} className="flex-1">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full transition-all duration-200 hover:scale-[1.02]">
               View Agent
             </Button>
           </Link>
@@ -181,7 +281,7 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
               variant="outline"
               size="icon"
               onClick={handleShareClick}
-              className="shrink-0"
+              className="shrink-0 transition-all duration-200 hover:scale-105"
             >
               <Share2 className="h-4 w-4" />
             </Button>
@@ -190,11 +290,20 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
             <Button
               variant="outline"
               onClick={handleFork}
-              disabled={isForking}
-              className="shrink-0"
+              disabled={isForking || showSuccess}
+              className={cn(
+                'shrink-0 transition-all duration-200',
+                showSuccess && 'bg-green-500 text-white border-green-500',
+                !showSuccess && 'hover:scale-105',
+              )}
               title="Fork this agent"
             >
-              {isForking ? (
+              {showSuccess ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4 animate-in zoom-in duration-200" />
+                  Forked!
+                </>
+              ) : isForking ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Forking...
@@ -208,6 +317,15 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
             </Button>
           )}
         </CardFooter>
+
+        {/* Success Animation Overlay */}
+        {showSuccess && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-green-500/10 animate-in fade-in-0 duration-300">
+            <div className="rounded-full bg-green-500 p-4 animate-in zoom-in-50 duration-300">
+              <CheckCircle2 className="h-8 w-8 text-white" />
+            </div>
+          </div>
+        )}
       </Card>
 
       {!showForkButton && (

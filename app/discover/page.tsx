@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { Agent } from '@/lib/types';
 import { Header } from '@/components/header';
 import { AgentCard } from '@/components/agent-card';
-import { Loader2 } from 'lucide-react';
+import { AgentCardSkeleton } from '@/components/agent-card-skeleton';
 
 export default function DiscoverPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -41,9 +41,10 @@ export default function DiscoverPage() {
         </div>
 
         {isLoading ? (
-          <div className="py-16 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-muted-foreground mt-4 text-lg">Loading agents...</p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <AgentCardSkeleton key={i} />
+            ))}
           </div>
         ) : agents.length === 0 ? (
           <div className="py-16 text-center">

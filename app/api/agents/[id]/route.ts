@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PATCH /api/agents/[id] - Update agent (for sharing settings)
+// PATCH /api/agents/[id] - Update agent (for sharing settings and core fields)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -61,7 +61,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { isPublic } = body;
+    const { isPublic, title, description, prompt, tools } = body;
 
     // Get current agent
     const [currentAgent] = await db
@@ -78,6 +78,21 @@ export async function PATCH(
       updatedAt: new Date(),
     };
 
+    // Update core fields if provided
+    if (title !== undefined) {
+      updateData.name = title;
+    }
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    if (prompt !== undefined) {
+      updateData.prompt = prompt;
+    }
+    if (tools !== undefined) {
+      updateData.tools = tools;
+    }
+
+    // Update sharing settings if provided
     if (typeof isPublic === 'boolean') {
       updateData.isPublic = isPublic;
       
