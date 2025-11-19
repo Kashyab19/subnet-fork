@@ -32,6 +32,7 @@ import {
   GitCompare,
   Square,
   StopCircle,
+  Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Agent } from '@/lib/types';
@@ -81,6 +82,7 @@ export default function RunAgentPage() {
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [wasStopped, setWasStopped] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   const reasoningRef = useRef<HTMLPreElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -371,6 +373,61 @@ export default function RunAgentPage() {
     setExecutionTime(null);
   };
 
+  const handleOptimize = async () => {
+    if (!currentConfig.prompt.trim()) {
+      toast({
+        title: 'No prompt to optimize',
+        description: 'Please enter a prompt first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const response = await fetch('/api/agents/optimize-prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: currentConfig.prompt }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.error || 'Failed to optimize prompt';
+        console.error('API Error:', errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!data.optimizedPrompt) {
+        throw new Error('No optimized prompt returned from API');
+      }
+
+      setCurrentConfig({ ...currentConfig, prompt: data.optimizedPrompt });
+      toast({
+        title: 'Prompt Optimized',
+        description: 'Your prompt has been enhanced with best practices',
+      });
+    } catch (error) {
+      console.error('Error optimizing prompt:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to optimize prompt. Please try again.';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   const handleCopyOutput = () => {
     const displayResult = selectedHistoryIndex !== null ? executionHistory[selectedHistoryIndex]?.result : currentResult;
     if (displayResult?.answer) {
@@ -472,7 +529,28 @@ export default function RunAgentPage() {
 
           {showComparison && parentAgent ? (
             <div className="space-y-2">
-              <Label>Agent Instructions Comparison</Label>
+              <div className="flex items-center justify-between">
+                <Label>Agent Instructions Comparison</Label>
+                <Button
+                  onClick={handleOptimize}
+                  disabled={isOptimizing || !currentConfig.prompt.trim()}
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {isOptimizing ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Optimizing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Magic Optimize
+                    </>
+                  )}
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground mb-2 text-xs">Before (Parent)</Label>
@@ -494,7 +572,28 @@ export default function RunAgentPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="prompt">Agent Instructions</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="prompt">Agent Instructions</Label>
+                <Button
+                  onClick={handleOptimize}
+                  disabled={isOptimizing || !currentConfig.prompt.trim()}
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {isOptimizing ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Optimizing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Magic Optimize
+                    </>
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="prompt"
                 value={currentConfig.prompt}

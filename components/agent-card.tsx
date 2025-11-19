@@ -12,10 +12,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Share2, GitFork, Loader2, Zap, Brain, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Trash2, Share2, GitFork, Loader2, Zap, Brain, Sparkles, CheckCircle2, GitBranch } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { AVAILABLE_TOOLS } from '@/lib/types';
 import { ShareDialog } from '@/components/share-dialog';
+import { GenealogyTree } from '@/components/genealogy-tree';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -35,6 +36,7 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
   const [isDeleting, setIsDeleting] = useState(false);
   const [isForking, setIsForking] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [genealogyDialogOpen, setGenealogyDialogOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const router = useRouter();
@@ -120,6 +122,12 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
     e.preventDefault();
     e.stopPropagation();
     setShareDialogOpen(true);
+  };
+
+  const handleGenealogyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGenealogyDialogOpen(true);
   };
 
   const speedIcons = {
@@ -277,44 +285,66 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
             </Button>
           </Link>
           {!showForkButton && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleShareClick}
-              className="shrink-0 transition-all duration-200 hover:scale-105"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleGenealogyClick}
+                className="shrink-0 transition-all duration-200 hover:scale-105"
+                title="View genealogy tree"
+              >
+                <GitBranch className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShareClick}
+                className="shrink-0 transition-all duration-200 hover:scale-105"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </>
           )}
           {showForkButton && agent.isPublic && (
-            <Button
-              variant="outline"
-              onClick={handleFork}
-              disabled={isForking || showSuccess}
-              className={cn(
-                'shrink-0 transition-all duration-200',
-                showSuccess && 'bg-green-500 text-white border-green-500',
-                !showSuccess && 'hover:scale-105',
-              )}
-              title="Fork this agent"
-            >
-              {showSuccess ? (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4 animate-in zoom-in duration-200" />
-                  Forked!
-                </>
-              ) : isForking ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Forking...
-                </>
-              ) : (
-                <>
-                  <GitFork className="mr-2 h-4 w-4" />
-                  Fork
-                </>
-              )}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleGenealogyClick}
+                className="shrink-0 transition-all duration-200 hover:scale-105"
+                title="View genealogy tree"
+              >
+                <GitBranch className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleFork}
+                disabled={isForking || showSuccess}
+                className={cn(
+                  'shrink-0 transition-all duration-200',
+                  showSuccess && 'bg-green-500 text-white border-green-500',
+                  !showSuccess && 'hover:scale-105',
+                )}
+                title="Fork this agent"
+              >
+                {showSuccess ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4 animate-in zoom-in duration-200" />
+                    Forked!
+                  </>
+                ) : isForking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Forking...
+                  </>
+                ) : (
+                  <>
+                    <GitFork className="mr-2 h-4 w-4" />
+                    Fork
+                  </>
+                )}
+              </Button>
+            </>
           )}
         </CardFooter>
 
@@ -338,6 +368,12 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
           }}
         />
       )}
+      <GenealogyTree
+        agentId={agent.id}
+        agentTitle={agent.title}
+        open={genealogyDialogOpen}
+        onOpenChange={setGenealogyDialogOpen}
+      />
     </>
   );
 }

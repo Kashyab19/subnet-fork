@@ -13,18 +13,77 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { AVAILABLE_TOOLS } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { Sparkles, LoaderCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CreatePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prompt, setPrompt] = useState('');
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   const handleToolToggle = (tool: string) => {
     setSelectedTools((prev) =>
       prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool],
     );
+  };
+
+  const handleOptimize = async () => {
+    if (!prompt.trim()) {
+      toast({
+        title: 'No prompt to optimize',
+        description: 'Please enter a prompt first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const response = await fetch('/api/agents/optimize-prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.error || 'Failed to optimize prompt';
+        console.error('API Error:', errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!data.optimizedPrompt) {
+        throw new Error('No optimized prompt returned from API');
+      }
+
+      setPrompt(data.optimizedPrompt);
+      toast({
+        title: 'Prompt Optimized',
+        description: 'Your prompt has been enhanced with best practices',
+      });
+    } catch (error) {
+      console.error('Error optimizing prompt:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to optimize prompt. Please try again.';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsOptimizing(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,7 +131,29 @@ export default function CreatePage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="prompt">Agent Instructions</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="prompt">Agent Instructions</Label>
+                  <Button
+                    type="button"
+                    onClick={handleOptimize}
+                    disabled={isOptimizing || !prompt.trim()}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {isOptimizing ? (
+                      <>
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        Optimizing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Magic Optimize
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Textarea
                   id="prompt"
                   value={prompt}
