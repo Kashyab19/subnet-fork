@@ -105,7 +105,7 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
         description: 'Redirecting to edit your new agent...',
       });
       
-      router.push(`/run/${forkedAgent.id}`);
+      router.push(`/playground/${forkedAgent.id}`);
     } catch (error: any) {
       console.error('Error forking agent:', error);
       toast({
@@ -174,7 +174,7 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
                       href={
                         agent.parentAgent.shareId
                           ? `/agent/${agent.parentAgent.shareId}`
-                          : `/run/${agent.parentAgent.id}`
+                          : `/playground/${agent.parentAgent.id}`
                       }
                       className="hover:underline"
                       onClick={(e) => e.stopPropagation()}
@@ -279,7 +279,7 @@ export function AgentCard({ agent, onDelete, onUpdate, showForkButton = false }:
         </CardContent>
 
         <CardFooter className="flex gap-2 pt-4">
-          <Link href={`/run/${agent.id}`} className="flex-1">
+          <Link href={`/playground/${agent.id}`} className="flex-1">
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full transition-all duration-200 hover:scale-[1.02]">
               View Agent
             </Button>

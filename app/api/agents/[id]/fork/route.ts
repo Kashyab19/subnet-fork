@@ -4,7 +4,6 @@ import { agentsTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateShareId } from '@/lib/utils';
 
-// POST /api/agents/[id]/fork - Fork an agent
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -12,7 +11,6 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Get the original agent
     const [originalAgent] = await db
       .select()
       .from(agentsTable)
@@ -23,12 +21,10 @@ export async function POST(
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    // Only allow forking public agents
     if (!originalAgent.isPublic) {
       return NextResponse.json({ error: 'Cannot fork private agent' }, { status: 403 });
     }
 
-    // Generate a unique shareId for the fork
     let newShareId: string | undefined;
     let isUnique = false;
     let attempts = 0;
@@ -54,7 +50,6 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to generate unique shareId' }, { status: 500 });
     }
 
-    // Create the forked agent
     const [forkedAgent] = await db
       .insert(agentsTable)
       .values({
@@ -64,11 +59,10 @@ export async function POST(
         tools: originalAgent.tools,
         parentAgentId: originalAgent.id,
         shareId: newShareId,
-        isPublic: false, // Start as private
+        isPublic: false,
       })
       .returning();
 
-    // Map database fields to match Agent interface
     const mappedAgent = {
       id: forkedAgent.id,
       title: forkedAgent.name,

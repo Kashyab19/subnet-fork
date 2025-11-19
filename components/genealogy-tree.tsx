@@ -63,7 +63,7 @@ export function GenealogyTree({ agentId, agentTitle, open, onOpenChange }: Genea
 
   const renderNode = (node: TreeNode, level: number = 0, isRoot: boolean = false) => {
     const hasChildren = node.children && node.children.length > 0;
-    const linkPath = node.shareId ? `/agent/${node.shareId}` : `/run/${node.id}`;
+    const linkPath = node.shareId ? `/agent/${node.shareId}` : `/playground/${node.id}`;
 
     return (
       <div key={node.id} className="relative">

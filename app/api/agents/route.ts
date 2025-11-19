@@ -3,7 +3,6 @@ import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
-// GET /api/agents - Get first 50 agents (optionally filter by isPublic)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -22,7 +21,6 @@ export async function GET(request: NextRequest) {
           .orderBy(desc(agentsTable.createdAt))
           .limit(50);
 
-    // Map database fields to match Agent interface
     const mappedAgents = await Promise.all(
       agents.map(async (agent) => {
         let parentAgent = null;
@@ -64,7 +62,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/agents - Create a new agent
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -84,7 +81,6 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // Map database fields to match Agent interface
     const mappedAgent = {
       id: newAgent.id,
       title: newAgent.name,

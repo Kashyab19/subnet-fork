@@ -11,9 +11,9 @@ export function Header() {
           <span className="text-foreground text-2xl font-bold">SubNet</span>
         </Link>
         <div className="flex items-center gap-4">
-          <Link href="/discover">
+          <Link href="/agents">
             <Button variant="ghost" className="cursor-pointer">
-              Discover
+              My Agents
             </Button>
           </Link>
           <Link href="/create">

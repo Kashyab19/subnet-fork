@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// Initialize OpenAI client - use standard OpenAI API for optimization
-// Falls back to Subconscious API if OPENAI_API_KEY is not set
 function getClient() {
   const openaiKey = process.env.OPENAI_API_KEY;
   const subconsciousKey = process.env.SUBCONSCIOUS_API_KEY;
@@ -35,7 +33,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize client (will throw if no API key is configured)
     let client: OpenAI;
     try {
       client = getClient();
@@ -66,12 +63,10 @@ Transform this user instruction into an expert-level system prompt:
 
 "${prompt}"
 
-Return ONLY the optimized system prompt, without any additional commentary or explanation.`;
+       Return ONLY the optimized system prompt, without any additional commentary or explanation.`;
 
-    // Subconscious API requires streaming, OpenAI can use either
-    if (useOpenAI) {
-      // Use non-streaming for OpenAI
-      const response = await client.chat.completions.create({
+      if (useOpenAI) {
+        const response = await client.chat.completions.create({
         model,
         messages: [
           {
@@ -96,10 +91,9 @@ Return ONLY the optimized system prompt, without any additional commentary or ex
         );
       }
 
-      return NextResponse.json({ optimizedPrompt });
-    } else {
-      // Use streaming for Subconscious API - simplified approach
-      const userMessage = `Transform this into a detailed system prompt with examples and clear instructions: "${prompt}"`;
+            return NextResponse.json({ optimizedPrompt });
+          } else {
+            const userMessage = `Transform this into a detailed system prompt with examples and clear instructions: "${prompt}"`;
 
       try {
         const response = await client.chat.completions.create({
@@ -110,7 +104,6 @@ Return ONLY the optimized system prompt, without any additional commentary or ex
           stream: true,
         });
 
-        // Collect streamed response
         let optimizedPrompt = '';
         for await (const chunk of response) {
           const content = chunk.choices?.[0]?.delta?.content || '';

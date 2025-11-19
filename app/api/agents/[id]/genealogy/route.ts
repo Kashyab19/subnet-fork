@@ -7,16 +7,17 @@ interface TreeNode {
   id: string;
   title: string;
   description: string;
+  prompt: string;
+  tools: string[];
   shareId?: string | null;
   isPublic?: boolean;
   parentAgentId?: string | null;
   children?: TreeNode[];
 }
 
-// Recursively fetch all ancestors (parents, grandparents, etc.)
 async function getAncestors(agentId: string, visited: Set<string> = new Set()): Promise<TreeNode[]> {
   if (visited.has(agentId)) {
-    return []; // Prevent cycles
+    return [];
   }
   visited.add(agentId);
 
@@ -44,6 +45,8 @@ async function getAncestors(agentId: string, visited: Set<string> = new Set()): 
     id: parent.id,
     title: parent.name,
     description: parent.description,
+    prompt: parent.prompt,
+    tools: (parent.tools as string[]) || [],
     shareId: parent.shareId,
     isPublic: parent.isPublic,
     parentAgentId: parent.parentAgentId,
@@ -53,10 +56,9 @@ async function getAncestors(agentId: string, visited: Set<string> = new Set()): 
   return [parentNode, ...ancestors];
 }
 
-// Recursively fetch all descendants (children, grandchildren, etc.)
 async function getDescendants(agentId: string, visited: Set<string> = new Set()): Promise<TreeNode[]> {
   if (visited.has(agentId)) {
-    return []; // Prevent cycles
+    return [];
   }
   visited.add(agentId);
 
@@ -72,6 +74,8 @@ async function getDescendants(agentId: string, visited: Set<string> = new Set())
       id: child.id,
       title: child.name,
       description: child.description,
+      prompt: child.prompt,
+      tools: (child.tools as string[]) || [],
       shareId: child.shareId,
       isPublic: child.isPublic,
       parentAgentId: child.parentAgentId,
@@ -88,7 +92,6 @@ async function getDescendants(agentId: string, visited: Set<string> = new Set())
   return descendants;
 }
 
-// GET /api/agents/[id]/genealogy - Get genealogy tree for an agent
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -96,7 +99,6 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Get the agent itself
     const [agent] = await db
       .select()
       .from(agentsTable)
@@ -107,17 +109,15 @@ export async function GET(
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    // Get ancestors (parents, grandparents, etc.)
     const ancestors = await getAncestors(id);
-
-    // Get descendants (children, grandchildren, etc.)
     const descendants = await getDescendants(id);
 
-    // Build the tree structure
     const rootNode: TreeNode = {
       id: agent.id,
       title: agent.name,
       description: agent.description,
+      prompt: agent.prompt,
+      tools: (agent.tools as string[]) || [],
       shareId: agent.shareId,
       isPublic: agent.isPublic,
       parentAgentId: agent.parentAgentId,
@@ -126,7 +126,7 @@ export async function GET(
 
     return NextResponse.json({
       root: rootNode,
-      ancestors: ancestors.reverse(), // Reverse to show oldest first
+      ancestors: ancestors.reverse(),
       descendants: descendants,
     });
   } catch (error) {

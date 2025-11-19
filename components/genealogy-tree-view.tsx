@@ -6,14 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { LoaderCircle, GitBranch, GitFork, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { AVAILABLE_TOOLS } from '@/lib/types';
+import { ToolIcon } from '@/components/tool-icon';
+import ReactMarkdown from 'react-markdown';
 
 interface TreeNode {
   id: string;
   title: string;
   description: string;
+  prompt: string;
+  tools: string[];
   shareId?: string | null;
   isPublic?: boolean;
   parentAgentId?: string | null;
@@ -36,27 +42,25 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
   const [data, setData] = useState<GenealogyData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Build a map of agents by ID for quick lookup
   const agentsMap = useMemo(() => {
     const map = new Map<string, Agent>();
     agents.forEach((agent) => map.set(agent.id, agent));
     return map;
   }, [agents]);
 
-  // Get root agents (agents without parents)
   const rootAgents = useMemo(() => {
     return agents.filter((agent) => !agent.parentAgentId);
   }, [agents]);
 
-  // Auto-select first root agent if available
   useEffect(() => {
     if (!selectedAgentId && rootAgents.length > 0) {
       setSelectedAgentId(rootAgents[0].id);
     }
-  }, [rootAgents, selectedAgentId]);
+  }, [rootAgents.length]);
 
-  // Fetch genealogy when agent is selected
   useEffect(() => {
     if (selectedAgentId) {
       fetchGenealogy(selectedAgentId);
@@ -86,18 +90,21 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
     fetchGenealogy(agentId);
   };
 
+  const handleNodeClick = (node: TreeNode) => {
+    setSelectedNode(node);
+    setIsModalOpen(true);
+  };
+
   const renderNode = (node: TreeNode, level: number = 0, isRoot: boolean = false, isLast: boolean = false) => {
     const hasChildren = node.children && node.children.length > 0;
-    const linkPath = `/run/${node.id}`;
+    const linkPath = `/playground/${node.id}`;
 
     return (
       <div key={node.id} className="relative flex flex-col items-center">
-        {/* Vertical line from parent with gradient */}
         {level > 0 && (
           <div className="absolute bottom-full w-0.5 h-8 bg-gradient-to-t from-primary/40 via-primary/20 to-transparent" />
         )}
 
-        {/* Node content */}
         <Card
           className={cn(
             'w-72 transition-all duration-300 cursor-pointer relative z-10 group',
@@ -108,9 +115,8 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
               : 'hover:border-primary/40 hover:shadow-lg bg-background',
             'backdrop-blur-sm'
           )}
-          onClick={() => handleAgentSelect(node.id)}
+          onClick={() => handleNodeClick(node)}
         >
-          {/* Decorative corner accent */}
           {isRoot && (
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full opacity-50" />
           )}
@@ -166,15 +172,11 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
           </CardContent>
         </Card>
 
-        {/* Horizontal line to children */}
         {hasChildren && (
           <>
-            {/* Vertical line down from parent with gradient */}
             <div className="w-0.5 h-8 bg-gradient-to-b from-primary/40 via-primary/20 to-transparent mt-2" />
             
-            {/* Children container with horizontal connector */}
             <div className="relative flex items-start justify-center gap-10 mt-8">
-              {/* Horizontal line connecting all children with gradient */}
               {node.children && node.children.length > 1 && (
                 <div 
                   className="absolute top-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"
@@ -188,10 +190,8 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
               
               {node.children?.map((child, index) => (
                 <div key={child.id} className="relative flex flex-col items-center">
-                  {/* Vertical line up to horizontal connector with gradient */}
                   <div className="absolute bottom-full left-1/2 w-0.5 h-8 bg-gradient-to-t from-primary/40 via-primary/20 to-transparent -translate-x-1/2" />
                   
-                  {/* Render child */}
                   {renderNode(child, level + 1, false, index === (node.children?.length || 0) - 1)}
                 </div>
               ))}
@@ -235,7 +235,6 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
         </Select>
       </div>
 
-      {/* Tree View */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -262,7 +261,6 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
       ) : (
         <div className="py-8 overflow-x-auto">
           <div className="flex flex-col items-center min-w-max px-8 bg-gradient-to-b from-background via-muted/20 to-background rounded-lg">
-            {/* Ancestors - displayed vertically above root */}
             {data.ancestors.length > 0 && (
               <div className="mb-12 flex flex-col items-center">
                 <h3 className="text-sm font-semibold text-muted-foreground mb-8 flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50">
@@ -278,13 +276,11 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
                       )}
                     </div>
                   ))}
-                  {/* Connection line to root with gradient */}
                   <div className="w-0.5 h-10 bg-gradient-to-b from-primary/50 via-primary/30 to-transparent my-2" />
                 </div>
               </div>
             )}
 
-            {/* Root */}
             <div className="relative flex flex-col items-center">
               {data.ancestors.length > 0 && (
                 <h3 className="text-sm font-semibold text-primary mb-8 px-4 py-2 rounded-full bg-primary/10">
@@ -294,7 +290,6 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
               {renderNode(data.root, 0, true, false)}
             </div>
 
-            {/* Descendants - displayed as tree branches below root */}
             {data.descendants.length > 0 && (
               <div className="mt-12 flex flex-col items-center">
                 <div className="w-0.5 h-10 bg-gradient-to-b from-primary/50 via-primary/30 to-transparent mb-4" />
@@ -314,7 +309,84 @@ export function GenealogyTreeView({ agents }: GenealogyTreeViewProps) {
           </div>
         </div>
       )}
+
+      {/* Agent Details Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedNode?.title}</DialogTitle>
+            <DialogDescription>{selectedNode?.description}</DialogDescription>
+          </DialogHeader>
+          
+          {selectedNode && (
+            <div className="space-y-6 mt-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Configuration</h3>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Tools ({selectedNode.tools.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedNode.tools.length > 0 ? (
+                        selectedNode.tools.map((tool) => (
+                          <Badge key={tool} variant="outline" className="text-xs gap-1.5">
+                            <ToolIcon tool={tool} size={12} />
+                            {AVAILABLE_TOOLS.find((t) => t.value === tool)?.label || tool}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No tools configured</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedNode.isPublic && (
+                      <Badge variant="outline" className="text-xs border-green-200 text-green-700 dark:border-green-800 dark:text-green-300">
+                        Public
+                      </Badge>
+                    )}
+                    {selectedNode.shareId && (
+                      <Badge variant="secondary" className="text-xs">
+                        Share ID: {selectedNode.shareId}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Prompt */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3">System Prompt</h3>
+                <div className="prose prose-sm text-foreground bg-muted/50 max-w-none overflow-y-auto rounded-md border p-4 text-xs max-h-96 whitespace-pre-wrap">
+                  <ReactMarkdown>{selectedNode.prompt}</ReactMarkdown>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    router.push(`/playground/${selectedNode.id}`);
+                  }}
+                  className="flex-1"
+                >
+                  Open in Editor
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    handleAgentSelect(selectedNode.id);
+                  }}
+                >
+                  View Genealogy
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 

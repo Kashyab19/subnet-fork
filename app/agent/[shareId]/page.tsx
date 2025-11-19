@@ -80,7 +80,7 @@ export default function PublicAgentPage() {
         description: 'Redirecting to your new agent...',
       });
       
-      router.push(`/run/${forkedAgent.id}`);
+      router.push(`/playground/${forkedAgent.id}`);
     } catch (error: any) {
       console.error('Error forking agent:', error);
       toast({
@@ -140,7 +140,7 @@ export default function PublicAgentPage() {
                   <div className="mt-2">
                     <Badge variant="outline" className="text-xs">
                       <Link
-                        href={agent.parentAgent.shareId ? `/agent/${agent.parentAgent.shareId}` : `/run/${agent.parentAgent.id}`}
+                        href={agent.parentAgent.shareId ? `/agent/${agent.parentAgent.shareId}` : `/playground/${agent.parentAgent.id}`}
                         className="hover:underline"
                       >
                         Forked from {agent.parentAgent.title}
@@ -179,7 +179,7 @@ export default function PublicAgentPage() {
 
             <div className="border-t pt-4">
               <div className="flex gap-2">
-                <Link href={`/run/${agent.id}`} className="flex-1">
+                <Link href={`/playground/${agent.id}`} className="flex-1">
                   <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full">
                     Run Agent
                   </Button>

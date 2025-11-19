@@ -39,7 +39,6 @@ export function ShareDialog({ agent, open, onOpenChange, onUpdate }: ShareDialog
   const handleTogglePublic = async (checked: boolean) => {
     setIsUpdating(true);
     try {
-      // Server will generate shareId if needed
       const response = await fetch(`/api/agents/${agent.id}`, {
         method: 'PATCH',
         headers: {

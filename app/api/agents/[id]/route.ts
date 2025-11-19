@@ -3,7 +3,6 @@ import { db } from '@/db';
 import { agentsTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-// GET /api/agents/[id] - Get a specific agent by UUID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -14,7 +13,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    // Fetch parent agent if this is a fork
     let parentAgent = null;
     if (agent.parentAgentId) {
       const [parent] = await db
@@ -33,7 +31,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    // Map database fields to match Agent interface
     const mappedAgent = {
       id: agent.id,
       title: agent.name,
@@ -53,7 +50,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PATCH /api/agents/[id] - Update agent (for sharing settings and core fields)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -63,7 +59,6 @@ export async function PATCH(
     const body = await request.json();
     const { isPublic, title, description, prompt, tools } = body;
 
-    // Get current agent
     const [currentAgent] = await db
       .select()
       .from(agentsTable)
@@ -78,7 +73,6 @@ export async function PATCH(
       updatedAt: new Date(),
     };
 
-    // Update core fields if provided
     if (title !== undefined) {
       updateData.name = title;
     }
@@ -92,11 +86,9 @@ export async function PATCH(
       updateData.tools = tools;
     }
 
-    // Update sharing settings if provided
     if (typeof isPublic === 'boolean') {
       updateData.isPublic = isPublic;
       
-      // Generate shareId server-side if making public and doesn't have one
       if (isPublic && !currentAgent.shareId) {
         const { generateShareId } = await import('@/lib/utils');
         let newShareId: string | undefined;
@@ -153,7 +145,6 @@ export async function PATCH(
   } catch (error: any) {
     console.error('Error updating agent:', error);
     
-    // Check for unique constraint violation
     if (error.code === '23505' || error.message?.includes('unique')) {
       return NextResponse.json({ error: 'Share ID already exists. Please try again.' }, { status: 409 });
     }
@@ -162,7 +153,6 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/agents/[id] - Delete a specific agent
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
